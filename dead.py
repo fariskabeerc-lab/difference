@@ -18,15 +18,45 @@ data = {
         9299600.18, 10140998.98, 6760597.24, 5483037.45, 16316872.69,
         5358873.05, 0, 26685848.50, 0, 0, 186136308.79
     ],
+    "2023 Avg Sales": [
+        145131.92, 47557.67, 114952.22, 35393.20, 59992.56, 23033.44,
+        38269.96, 41732.51, 27821.39, 22563.94, 67147.62,
+        22052.98, 0, 109818.31, 0, 0, 755467.70
+    ],
+    "2023 Mar(%)": [
+        19.95, 20.92, 19.77, 17.65, 16.36, 19.36,
+        19.17, 21.74, 21.32, 20.83, 20.72,
+        20.34, 0, 17.49, 0, 0, 19.42
+    ],
     "2024 Total Sales": [
         34639834.01, 13065728.25, 29616414.52, 12060825.99, 14851756.73, 5753112.33,
         9948602.69, 10876887.59, 6741894.61, 6292322.86, 17859351.69,
         6148201.78, 5533772.24, 33194831.22, 4640301.45, 0, 211223837.96
     ],
+    "2024 Avg Sales": [
+        141966.53, 53548.07, 121378.75, 49429.61, 60867.86, 23578.33,
+        40772.96, 44577.41, 27630.72, 25788.21, 73194.06,
+        25197.55, 22679.39, 136044.39, 38349.60, 0, 885003.44
+    ],
+    "2024 Mar(%)": [
+        20.94, 20.68, 17.88, 17.44, 16.05, 19.10,
+        19.60, 21.47, 21.37, 23.06, 19.49,
+        21.15, 17.18, 18.00, 15.44, 0, 19.14
+    ],
     "2025 Total Sales": [
         31162845.37, 10289632.43, 27783796.93, 10570459.29, 13602032.89, 4564110.21,
         9042951.59, 10270157.40, 6337346.41, 5889305.34, 17966957.48,
         6571452.28, 6159775.78, 34964501.80, 9708622.47, 9789990.97, 214673938.64
+    ],
+    "2025 Avg Sales": [
+        128242.16, 42344.17, 114336.61, 43499.83, 55975.44, 18782.35,
+        37213.79, 42264.02, 26079.61, 24235.82, 73938.10,
+        27043.01, 25348.87, 143886.84, 39953.18, 40288.03, 883431.85
+    ],
+    "2025 Mar(%)": [
+        21.39, 22.65, 19.72, 18.75, 16.61, 19.79,
+        19.83, 23.04, 21.19, 24.60, 20.66,
+        21.82, 19.38, 19.99, 18.22, 24.59, 20.53
     ],
     "DIFFERENCE Total Sales": [
         -3476988.64, -2776095.82, -1832617.59, -1490366.70, -1249723.84, -1189002.12,
@@ -38,75 +68,62 @@ data = {
 df = pd.DataFrame(data)
 
 # --- Sidebar Filters ---
-branches = df["Branch"].tolist()
-branches = ["All Branches"] + branches[:-1]  # exclude Grand Total
+branches = ["All Branches"] + df["Branch"].tolist()[:-1]  # Exclude Grand Total
 selected_branch = st.sidebar.selectbox("Select Branch", branches)
 
 # --- Filter Data ---
 if selected_branch != "All Branches":
     filtered_df = df[df["Branch"] == selected_branch]
 else:
-    filtered_df = df[df["Branch"] != "Grand Total"]  # exclude Grand Total for graphing
+    filtered_df = df[df["Branch"] != "Grand Total"]  # Exclude Grand Total for charts
 
-# --- Metrics ---
+# --- Key Metrics ---
 st.subheader("Key Metrics")
-total_2023 = filtered_df["2023 Total Sales"].sum()
-total_2024 = filtered_df["2024 Total Sales"].sum()
-total_2025 = filtered_df["2025 Total Sales"].sum()
-diff_total = filtered_df["DIFFERENCE Total Sales"].sum()
+cols = st.columns(6)
+cols[0].metric("2023 Total Sales", f"{filtered_df['2023 Total Sales'].sum():,.2f}")
+cols[1].metric("2023 Avg Sales", f"{filtered_df['2023 Avg Sales'].mean():,.2f}")
+cols[2].metric("2023 Margin (%)", f"{filtered_df['2023 Mar(%)'].mean():.2f}")
+cols[3].metric("2024 Total Sales", f"{filtered_df['2024 Total Sales'].sum():,.2f}")
+cols[4].metric("2024 Avg Sales", f"{filtered_df['2024 Avg Sales'].mean():,.2f}")
+cols[5].metric("2024 Margin (%)", f"{filtered_df['2024 Mar(%)'].mean():.2f}")
 
-col1, col2, col3, col4 = st.columns(4)
-col1.metric("2023 Total Sales", f"{total_2023:,.2f}")
-col2.metric("2024 Total Sales", f"{total_2024:,.2f}")
-col3.metric("2025 Total Sales", f"{total_2025:,.2f}")
-col4.metric("Difference Total Sales", f"{diff_total:,.2f}")
+cols2 = st.columns(3)
+cols2[0].metric("2025 Total Sales", f"{filtered_df['2025 Total Sales'].sum():,.2f}")
+cols2[1].metric("2025 Avg Sales", f"{filtered_df['2025 Avg Sales'].mean():,.2f}")
+cols2[2].metric("2025 Margin (%)", f"{filtered_df['2025 Mar(%)'].mean():.2f}")
 
 st.markdown("---")
 
 # --- Horizontal Bar Charts ---
-st.subheader("Total Sales by Branch")
+def plot_bar(column, title, color_scale):
+    fig = px.bar(
+        filtered_df,
+        x=column,
+        y="Branch",
+        orientation='h',
+        text=column,
+        color=column,
+        color_continuous_scale=color_scale
+    )
+    fig.update_traces(texttemplate='%{text:,.2f}', textposition='outside')
+    fig.update_layout(height=500, yaxis={'categoryorder':'total ascending'})
+    st.plotly_chart(fig, use_container_width=True)
 
-fig = px.bar(
-    filtered_df,
-    x="2023 Total Sales",
-    y="Branch",
-    orientation='h',
-    text="2023 Total Sales",
-    labels={"2023 Total Sales": "2023 Total Sales"},
-    color="2023 Total Sales",
-    color_continuous_scale="Viridis"
-)
-fig.update_layout(height=600, yaxis={'categoryorder':'total ascending'})
-st.plotly_chart(fig, use_container_width=True)
+st.subheader("Horizontal Bar Charts")
+plot_bar("2023 Total Sales", "2023 Total Sales by Branch", "Viridis")
+plot_bar("2023 Avg Sales", "2023 Avg Sales by Branch", "Cividis")
+plot_bar("2023 Mar(%)", "2023 Margin (%) by Branch", "Greens")
 
-fig2 = px.bar(
-    filtered_df,
-    x="2024 Total Sales",
-    y="Branch",
-    orientation='h',
-    text="2024 Total Sales",
-    labels={"2024 Total Sales": "2024 Total Sales"},
-    color="2024 Total Sales",
-    color_continuous_scale="Blues"
-)
-fig2.update_layout(height=600, yaxis={'categoryorder':'total ascending'})
-st.plotly_chart(fig2, use_container_width=True)
+plot_bar("2024 Total Sales", "2024 Total Sales by Branch", "Blues")
+plot_bar("2024 Avg Sales", "2024 Avg Sales by Branch", "Purples")
+plot_bar("2024 Mar(%)", "2024 Margin (%) by Branch", "Oranges")
 
-fig3 = px.bar(
-    filtered_df,
-    x="2025 Total Sales",
-    y="Branch",
-    orientation='h',
-    text="2025 Total Sales",
-    labels={"2025 Total Sales": "2025 Total Sales"},
-    color="2025 Total Sales",
-    color_continuous_scale="Greens"
-)
-fig3.update_layout(height=600, yaxis={'categoryorder':'total ascending'})
-st.plotly_chart(fig3, use_container_width=True)
+plot_bar("2025 Total Sales", "2025 Total Sales by Branch", "Teal")
+plot_bar("2025 Avg Sales", "2025 Avg Sales by Branch", "Pinkyl")
+plot_bar("2025 Mar(%)", "2025 Margin (%) by Branch", "Reds")
 
 st.markdown("---")
 
-# --- Show Table ---
+# --- Show Data Table ---
 st.subheader("Data Table")
 st.dataframe(filtered_df, height=500)
