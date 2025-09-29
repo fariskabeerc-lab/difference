@@ -2,81 +2,61 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# --- Load Multiple Excel Files ---
-files = ["dead_stock1.xlsx", "dead_stock2.xlsx", "dead_stock3.xlsx"]  # update file names
-dfs = [pd.read_excel(f) for f in files]
-df = pd.concat(dfs, ignore_index=True)
+# --- Page Setup ---
+st.set_page_config(page_title="Branch Yearly Sales Report", layout="wide")
+st.title("📊 Branch Yearly Sales Insights")
 
-# --- Clean column names ---
-df.columns = df.columns.str.strip()
+# --- Load Data ---
+df = pd.read_excel("Sales 2024 Vs 2025 (1).Xlsx")  # Replace with your file
 
-# --- Ensure numeric fields ---
-for col in ["Stock Value", "Stock", "Profit", "Margin%", "Total Sales", "Cost", "Selling", "LP Price"]:
-    if col in df.columns:
-        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+# --- Calculate Totals ---
+years = ["2023", "2024", "2025"]
+metrics = ["Total Sales", "Avg Sales", "Mar(%)"]
 
-# --- Handle negative stock for plotting ---
-df["Stock_clean"] = df["Stock"].clip(lower=0)
+# Initialize dictionary to store totals
+totals = {}
+for year in years:
+    totals[year] = {}
+    for metric in metrics:
+        col_name = f"{year} 01-JAN to 31-AUG {metric}"
+        totals[year][metric] = df[col_name].sum() if metric != "Mar(%)" else df[col_name].mean()
 
-# --- Dashboard Layout ---
-st.set_page_config(page_title="Dead Stock Dashboard", layout="wide")
-st.title("📊Safa Oud metha Stock(Zero Sales and LP before 2025)")
+# --- Calculate Differences ---
+diff_2024_2023 = totals["2024"]["Total Sales"] - totals["2023"]["Total Sales"]
+diff_2025_2024 = totals["2025"]["Total Sales"] - totals["2024"]["Total Sales"]
 
-# --- KPIs at Top ---
-col1, col2, col3, col4, col5 = st.columns(5)
-col1.metric("Total Dead Stock Items", f"{len(df):,}")
-col2.metric("Total Stock Qty", f"{df['Stock'].sum():,.0f}")
-col3.metric("Total Stock Value", f"{df['Stock Value'].sum():,.2f}")
+# --- Display Insights ---
+st.subheader("Key Insights")
+col1, col2, col3 = st.columns(3)
+col1.metric("Total Sales 2023", f"{totals['2023']['Total Sales']:,.2f}")
+col2.metric("Total Sales 2024", f"{totals['2024']['Total Sales']:,.2f}", f"{diff_2024_2023:,.2f}")
+col3.metric("Total Sales 2025", f"{totals['2025']['Total Sales']:,.2f}", f"{diff_2025_2024:,.2f}")
 
-# --- High Priority Items (Top 10 by Stock Value) ---
-st.subheader("🚨 High Priority Items (Top 10 by Stock Value)")
-high_priority = df.nlargest(10, "Stock Value")
-priority_cols = [c for c in ["Item Bar Code","Item Name","Stock","Stock Value","Margin%","Profit",
-                             "Cost","Selling","LP Price","LP Date","LP Supplier"] if c in df.columns]
-st.table(high_priority[priority_cols])  # removed gradient to avoid matplotlib dependency
+col4, col5, col6 = st.columns(3)
+col4.metric("Average Sales 2023", f"{totals['2023']['Avg Sales']:,.2f}")
+col5.metric("Average Sales 2024", f"{totals['2024']['Avg Sales']:,.2f}")
+col6.metric("Average Sales 2025", f"{totals['2025']['Avg Sales']:,.2f}")
 
-# --- Top Items by Stock Value (Horizontal Bar Chart) ---
-st.subheader("Top 20 Items by Stock Value")
-top_items = df.nlargest(20, "Stock Value")
-fig1 = px.bar(
-    top_items, y="Item Name", x="Stock Value", orientation="h",
-    text="Stock Value", color="Stock Value", color_continuous_scale="Reds",
-    hover_data={
-        "Item Bar Code": True,
-        "Item Name": True,
-        "Stock": True,
-        "Stock Value": True,
-        "Margin%": True,
-        "Profit": True,
-        "Cost": True,
-        "Selling": True,
-        "LP Price": True
-    }
-)
-fig1.update_layout(yaxis={'categoryorder':'total ascending'})
-st.plotly_chart(fig1, use_container_width=True)
+col7, col8, col9 = st.columns(3)
+col7.metric("Avg Margin 2023 (%)", f"{totals['2023']['Mar(%)']:.2f}%")
+col8.metric("Avg Margin 2024 (%)", f"{totals['2024']['Mar(%)']:.2f}%")
+col9.metric("Avg Margin 2025 (%)", f"{totals['2025']['Mar(%)']:.2f}%")
 
-# --- Pie Chart: Category-wise Stock Value ---
-st.subheader("Stock Value by Category")
-if "Category" in df.columns:
-    category_df = df.groupby("Category")["Stock Value"].sum().reset_index()
-    fig2 = px.pie(
-        category_df, values="Stock Value", names="Category",
-        hover_data={"Stock Value": True},
-        color_discrete_sequence=px.colors.sequential.Reds
-    )
-    fig2.update_traces(textinfo="percent+label")
-    st.plotly_chart(fig2, use_container_width=True)
+st.markdown("---")
 
+# --- Show DataFrame ---
+st.subheader("Branch-wise Data")
+st.dataframe(df, height=500)
 
+# --- Optional: Visualize Total Sales by Year ---
+sales_df = pd.DataFrame({
+    "Year": years,
+    "Total Sales": [totals[y]["Total Sales"] for y in years]
+})
 
-# --- Detailed Data Table (Full Details) ---
-st.subheader("Detailed Dead Stock Items (Full Details)")
-detailed_cols = [c for c in ["Item Bar Code","Item Name","Item No","Stock","Stock Value","Margin%","Profit",
-                             "Cost","Selling","LP Price","LP Date","LP Supplier","CF","Unit","Category","Pre Return"] 
-                 if c in df.columns]
-st.dataframe(df[detailed_cols])
-
-# --- Download Option ---
-csv = df[detailed_cols].to_csv(index=False).encode('utf-8')
-st.download_button("📥 Download Full Dead Stock Data", csv, "dead_stock_full.csv", "text/csv")
+st.subheader("Total Sales Trend")
+fig = px.bar(sales_df, x="Year", y="Total Sales", text="Total Sales", color="Total Sales",
+             color_continuous_scale="Viridis")
+fig.update_traces(texttemplate='%{text:,.2f}', textposition='outside')
+fig.update_layout(yaxis_title="Total Sales", xaxis_title="Year", height=500)
+st.plotly_chart(fig, use_container_width=True)
