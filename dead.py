@@ -132,4 +132,8 @@ def plot_horizontal_bar(df, column, title, color_scale):
 
 # --- Graphs Section (Always All Branches) ---
 st.subheader("📊 Branch Comparison Charts (All Branches)")
-for year, color in zip(["2023", "2024", "2025"], ["Viridis", "Blues
+for year, color in zip(["2023", "2024", "2025"], ["Viridis", "Blues", "Greens"]):
+    st.markdown(f"### {year} Sales Metrics")
+    plot_horizontal_bar(df[:-1], f"{year} Total Sales", f"{year} Total Sales", color)  # exclude Grand Total
+    plot_horizontal_bar(df[:-1], f"{year} Avg Sales", f"{year} Avg Sales", color)
+    plot_horizontal_bar(df[:-1], f"{year} Mar(%)", f"{year} Margin (%)", color)
