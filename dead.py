@@ -22,6 +22,9 @@ filtered_df = df.copy()
 if selected_branch != "All Branches":
     filtered_df = filtered_df[filtered_df["Branch"] == selected_branch]
 
+# --- Exclude Grand Total for calculations ---
+filtered_df_no_total = filtered_df[filtered_df["Branch"].str.upper() != "GRAND TOTAL"]
+
 # --- Compute Totals & Differences ---
 totals = {}
 for year in years:
@@ -29,15 +32,15 @@ for year in years:
     for metric in metrics:
         col_name = f"{year} 01-JAN to 31-AUG {metric}"
         if metric != "Mar(%)":
-            totals[year][metric] = filtered_df[col_name].sum()
+            totals[year][metric] = filtered_df_no_total[col_name].sum()
         else:
-            totals[year][metric] = filtered_df[col_name].mean()
+            totals[year][metric] = filtered_df_no_total[col_name].mean()
 
-# Differences columns exist in your data
+# Differences columns
 diff_cols = ["DIFFERENCE Total Sales", "DIFFERENCE Avg Sales", "DIFFERENCE Mar(%)"]
-diffs = {col: filtered_df[col].sum() for col in diff_cols}
+diffs = {col: filtered_df_no_total[col].sum() for col in diff_cols}
 
-# Compute Average Sales as Total ÷ 269
+# Average Sales calculation
 for year in years:
     totals[year]["Average Sales"] = totals[year]["Total Sales"] / 269
 
@@ -94,7 +97,7 @@ if selected_branch == "All Branches":
         for year in years:
             col_name = f"{year} 01-JAN to 31-AUG {metric}"
             st.subheader(f"{metric} - {year}")
-            plot_horizontal_bar(filtered_df, col_name, "Branch", col_name,
+            plot_horizontal_bar(filtered_df_no_total, col_name, "Branch", col_name,
                                 f"{metric} ({year})",
                                 "Viridis" if metric=="Total Sales" else "Blues")
 else:
@@ -104,7 +107,7 @@ else:
         row = {"Metric": metric}
         for year in years:
             col_name = f"{year} 01-JAN to 31-AUG {metric}"
-            row[year] = filtered_df.iloc[0][col_name]
+            row[year] = filtered_df_no_total.iloc[0][col_name] if not filtered_df_no_total.empty else 0
         single_data.append(row)
     single_df = pd.DataFrame(single_data)
     for idx, row in single_df.iterrows():
@@ -114,6 +117,6 @@ else:
 
 st.markdown("---")
 
-# --- Show Data Table ---
+# --- Show Data Table (with Grand Total) ---
 st.subheader("Branch-wise Full Data")
 st.dataframe(filtered_df, height=600)
