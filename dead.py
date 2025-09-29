@@ -21,12 +21,12 @@ data = {
     "2023 Avg Sales": [
         145131.92, 47557.67, 114952.22, 35393.20, 59992.56, 23033.44,
         38269.96, 41732.51, 27821.39, 22563.94, 67147.62,
-        22052.98, 0, 109818.31, 0, 0, 755467.70
+        22052.98, 22679.39, 109818.31, 38349.60, 40288.03, 755467.70
     ],
     "2023 Mar(%)": [
         19.95, 20.92, 19.77, 17.65, 16.36, 19.36,
         19.17, 21.74, 21.32, 20.83, 20.72,
-        20.34, 0, 17.49, 0, 0, 19.42
+        20.34, 17.18, 17.49, 15.44, 24.59, 19.42
     ],
     "2024 Total Sales": [
         34639834.01, 13065728.25, 29616414.52, 12060825.99, 14851756.73, 5753112.33,
@@ -62,6 +62,16 @@ data = {
         -3476988.64, -2776095.82, -1832617.59, -1490366.70, -1249723.84, -1189002.12,
         -905651.10, -606730.19, -404548.20, -403017.52, 107605.79,
         423250.50, 626003.54, 1769670.58, 5068321.02, 9789990.97, -6339890.29
+    ],
+    "DIFFERENCE Avg Sales": [
+        -13724.37, -11203.90, -7042.14, -5929.78, -4892.41, -4795.98,
+        -3559.17, -2313.39, -1551.10, -1552.38, 744.03,
+        1845.47, 2669.48, 7842.45, 1603.58, 0, -41859.62
+    ],
+    "DIFFERENCE Mar(%)": [
+        0.45, 1.97, 1.84, 1.32, 0.56, 0.69,
+        0.23, 1.57, -0.17, 1.54, 1.17,
+        0.67, 2.20, 1.99, 2.78, 0, 19.14
     ]
 }
 
@@ -77,29 +87,45 @@ else:
     filtered_df = df[df["Branch"] != "Grand Total"]
 
 # --- Key Metrics ---
-st.subheader("📌 Key Metrics")
+st.subheader("📌 Key Metrics (Accurate Totals & Averages)")
+
+def calculate_metrics(df, year):
+    total_sales = df[f"{year} Total Sales"].sum()
+    avg_sales = total_sales / len(df[df["Branch"] != "Grand Total"])
+    avg_margin = df[f"{year} Mar(%)"].sum() / len(df[df["Branch"] != "Grand Total"])
+    return total_sales, avg_sales, avg_margin
 
 metrics1 = st.columns(3)
-metrics1[0].metric("2023 Total Sales", f"{filtered_df['2023 Total Sales'].sum():,.2f}")
-metrics1[1].metric("2023 Avg Sales", f"{filtered_df['2023 Avg Sales'].mean():,.2f}")
-metrics1[2].metric("2023 Margin (%)", f"{filtered_df['2023 Mar(%)'].mean():.2f}")
+ts, avs, amg = calculate_metrics(filtered_df, "2023")
+metrics1[0].metric("2023 Total Sales", f"{ts:,.2f}")
+metrics1[1].metric("2023 Avg Sales", f"{avs:,.2f}")
+metrics1[2].metric("2023 Avg Margin (%)", f"{amg:.2f}")
 
 metrics2 = st.columns(3)
-metrics2[0].metric("2024 Total Sales", f"{filtered_df['2024 Total Sales'].sum():,.2f}")
-metrics2[1].metric("2024 Avg Sales", f"{filtered_df['2024 Avg Sales'].mean():,.2f}")
-metrics2[2].metric("2024 Margin (%)", f"{filtered_df['2024 Mar(%)'].mean():.2f}")
+ts, avs, amg = calculate_metrics(filtered_df, "2024")
+metrics2[0].metric("2024 Total Sales", f"{ts:,.2f}")
+metrics2[1].metric("2024 Avg Sales", f"{avs:,.2f}")
+metrics2[2].metric("2024 Avg Margin (%)", f"{amg:.2f}")
 
 metrics3 = st.columns(3)
-metrics3[0].metric("2025 Total Sales", f"{filtered_df['2025 Total Sales'].sum():,.2f}")
-metrics3[1].metric("2025 Avg Sales", f"{filtered_df['2025 Avg Sales'].mean():,.2f}")
-metrics3[2].metric("2025 Margin (%)", f"{filtered_df['2025 Mar(%)'].mean():.2f}")
+ts, avs, amg = calculate_metrics(filtered_df, "2025")
+metrics3[0].metric("2025 Total Sales", f"{ts:,.2f}")
+metrics3[1].metric("2025 Avg Sales", f"{avs:,.2f}")
+metrics3[2].metric("2025 Avg Margin (%)", f"{amg:.2f}")
 
-metrics4 = st.columns(1)
-metrics4[0].metric("Difference Total Sales", f"{filtered_df['DIFFERENCE Total Sales'].sum():,.2f}")
+metrics4 = st.columns(3)
+diff_total = filtered_df["DIFFERENCE Total Sales"].sum()
+diff_avg = filtered_df["DIFFERENCE Avg Sales"].sum()
+diff_margin = filtered_df["DIFFERENCE Mar(%)"].sum()
+metrics4[0].metric("Difference Total Sales", f"{diff_total:,.2f}")
+metrics4[1].metric("Difference Avg Sales", f"{diff_avg:,.2f}")
+metrics4[2].metric("Difference Avg Margin (%)", f"{diff_margin:.2f}")
 
 st.markdown("---")
 
-# --- Function to Plot Horizontal Bar Charts ---
+# --- Horizontal Bar Charts ---
+st.subheader("📊 Branch Comparison Charts")
+
 def plot_horizontal_bar(df, column, title, color_scale):
     fig = px.bar(
         df,
@@ -121,14 +147,11 @@ def plot_horizontal_bar(df, column, title, color_scale):
     st.plotly_chart(fig, use_container_width=True)
     st.markdown("<br>", unsafe_allow_html=True)
 
-# --- Horizontal Bar Charts ---
-st.subheader("📊 Branch Comparison Charts")
-
 for year, color in zip(["2023", "2024", "2025"], ["Viridis", "Blues", "Greens"]):
     st.markdown(f"### {year} Sales Metrics")
     plot_horizontal_bar(filtered_df, f"{year} Total Sales", f"{year} Total Sales", color)
     plot_horizontal_bar(filtered_df, f"{year} Avg Sales", f"{year} Avg Sales", color)
-    plot_horizontal_bar(filtered_df, f"{year} Mar(%)", f"{year} Margin (%)", color)
+    plot_horizontal_bar(filtered_df, f"{year} Mar(%)", f"{year} Avg Margin (%)", color)
 
 st.markdown("---")
 
