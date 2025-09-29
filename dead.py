@@ -1,119 +1,112 @@
+import streamlit as st
+import pandas as pd
+import plotly.express as px
 
 # --- Page Setup ---
-st.set_page_config(page_title="Branch Yearly Sales Dashboard", layout="wide")
-st.title("📊 Branch Yearly Sales Dashboard (2023-2025)")
+st.set_page_config(page_title="Branch Sales Dashboard", layout="wide")
+st.title("📊 Branch Sales Dashboard (2023-2025)")
 
-# --- Load Data ---
-df = pd.read_excel("Sales 2024 Vs 2025 (3).Xlsx")  # replace with your file
+# --- Data ---
+data = {
+    "Branch": [
+        "AZHAR", "LIWAN", "HADEQAT", "SABAH", "HILAL", "SAHAT",
+        "SAFA", "PORT SAEED", "AZHAR GT", "JAIS", "FIDA",
+        "BLUE PEARL", "TAYTAY", "SALEM MALL", "OUD MEHTA", "SUPERSTORE", "Grand Total"
+    ],
+    "2023 Total Sales": [
+        35267055.52, 11556513.30, 27933389.52, 8600547.92, 14578191.25, 5597125.02,
+        9299600.18, 10140998.98, 6760597.24, 5483037.45, 16316872.69,
+        5358873.05, 0, 26685848.50, 0, 0, 186136308.79
+    ],
+    "2024 Total Sales": [
+        34639834.01, 13065728.25, 29616414.52, 12060825.99, 14851756.73, 5753112.33,
+        9948602.69, 10876887.59, 6741894.61, 6292322.86, 17859351.69,
+        6148201.78, 5533772.24, 33194831.22, 4640301.45, 0, 211223837.96
+    ],
+    "2025 Total Sales": [
+        31162845.37, 10289632.43, 27783796.93, 10570459.29, 13602032.89, 4564110.21,
+        9042951.59, 10270157.40, 6337346.41, 5889305.34, 17966957.48,
+        6571452.28, 6159775.78, 34964501.80, 9708622.47, 9789990.97, 214673938.64
+    ],
+    "DIFFERENCE Total Sales": [
+        -3476988.64, -2776095.82, -1832617.59, -1490366.70, -1249723.84, -1189002.12,
+        -905651.10, -606730.19, -404548.20, -403017.52, 107605.79,
+        423250.50, 626003.54, 1769670.58, 5068321.02, 9789990.97, -6339890.29
+    ]
+}
+
+df = pd.DataFrame(data)
 
 # --- Sidebar Filters ---
-branches = df["Branch"].unique().tolist()
-branches = ["All Branches"] + branches
+branches = df["Branch"].tolist()
+branches = ["All Branches"] + branches[:-1]  # exclude Grand Total
 selected_branch = st.sidebar.selectbox("Select Branch", branches)
 
-years = ["2023", "2024", "2025"]
-metrics = ["Total Sales", "Avg Sales", "Mar(%)"]
-
-# --- Filter by Branch ---
-filtered_df = df.copy()
+# --- Filter Data ---
 if selected_branch != "All Branches":
-    filtered_df = filtered_df[filtered_df["Branch"] == selected_branch]
-
-# --- Exclude Grand Total for calculations ---
-filtered_df_no_total = filtered_df[filtered_df["Branch"].str.upper() != "GRAND TOTAL"]
-
-# --- Compute Totals & Differences ---
-totals = {}
-for year in years:
-    totals[year] = {}
-    for metric in metrics:
-        col_name = f"{year} 01-JAN to 31-AUG {metric}"
-        if metric != "Mar(%)":
-            totals[year][metric] = filtered_df_no_total[col_name].sum()
-        else:
-            totals[year][metric] = filtered_df_no_total[col_name].mean()
-
-# Differences columns
-diff_cols = ["DIFFERENCE Total Sales", "DIFFERENCE Avg Sales", "DIFFERENCE Mar(%)"]
-diffs = {col: filtered_df_no_total[col].sum() for col in diff_cols}
-
-# Average Sales calculation
-for year in years:
-    totals[year]["Average Sales"] = totals[year]["Total Sales"] / 269
-
-# --- Key Insights ---
-st.subheader("Key Insights")
-col1, col2, col3 = st.columns(3)
-col1.metric("Total Sales 2023", f"{totals['2023']['Total Sales']:,.2f}")
-col2.metric("Total Sales 2024", f"{totals['2024']['Total Sales']:,.2f}",
-            f"{totals['2024']['Total Sales'] - totals['2023']['Total Sales']:,.2f}")
-col3.metric("Total Sales 2025", f"{totals['2025']['Total Sales']:,.2f}",
-            f"{totals['2025']['Total Sales'] - totals['2024']['Total Sales']:,.2f}")
-
-col4, col5, col6 = st.columns(3)
-col4.metric("Avg Sales 2023", f"{totals['2023']['Average Sales']:,.2f}")
-col5.metric("Avg Sales 2024", f"{totals['2024']['Average Sales']:,.2f}")
-col6.metric("Avg Sales 2025", f"{totals['2025']['Average Sales']:,.2f}")
-
-col7, col8, col9 = st.columns(3)
-col7.metric("Avg Margin 2023 (%)", f"{totals['2023']['Mar(%)']:.2f}")
-col8.metric("Avg Margin 2024 (%)", f"{totals['2024']['Mar(%)']:.2f}")
-col9.metric("Avg Margin 2025 (%)", f"{totals['2025']['Mar(%)']:.2f}")
-
-st.markdown("---")
-
-# --- Function to plot horizontal bar ---
-def plot_horizontal_bar(data, x_col, y_col, color_col, title, color_scale="Viridis"):
-    fig = px.bar(
-        data,
-        y=y_col,
-        x=x_col,
-        orientation='h',
-        text=x_col,
-        color=color_col,
-        color_continuous_scale=color_scale,
-        labels={x_col: title, y_col: y_col}
-    )
-    fig.update_traces(
-        texttemplate='%{text:,.2f}',
-        textposition='outside',
-        hovertemplate='<b>%{y}</b><br>Value: %{x:,.2f}<extra></extra>'
-    )
-    fig.update_layout(
-        yaxis={'categoryorder':'total ascending'},
-        height=500,
-        margin=dict(l=100, r=50, t=50, b=50),
-        plot_bgcolor='rgba(0,0,0,0)',
-        paper_bgcolor='rgba(0,0,0,0)'
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
-# --- Prepare Data for Charts ---
-if selected_branch == "All Branches":
-    for metric in metrics:
-        for year in years:
-            col_name = f"{year} 01-JAN to 31-AUG {metric}"
-            st.subheader(f"{metric} - {year}")
-            plot_horizontal_bar(filtered_df_no_total, col_name, "Branch", col_name,
-                                f"{metric} ({year})",
-                                "Viridis" if metric=="Total Sales" else "Blues")
+    filtered_df = df[df["Branch"] == selected_branch]
 else:
-    # Single branch: show metrics over years as horizontal bars
-    single_data = []
-    for metric in metrics:
-        row = {"Metric": metric}
-        for year in years:
-            col_name = f"{year} 01-JAN to 31-AUG {metric}"
-            row[year] = filtered_df_no_total.iloc[0][col_name] if not filtered_df_no_total.empty else 0
-        single_data.append(row)
-    single_df = pd.DataFrame(single_data)
-    for idx, row in single_df.iterrows():
-        st.subheader(f"{row['Metric']} - {selected_branch}")
-        plot_horizontal_bar(pd.DataFrame({"Year": years, "Value": [row[y] for y in years]}),
-                            "Value", "Year", "Value", row['Metric'])
+    filtered_df = df[df["Branch"] != "Grand Total"]  # exclude Grand Total for graphing
+
+# --- Metrics ---
+st.subheader("Key Metrics")
+total_2023 = filtered_df["2023 Total Sales"].sum()
+total_2024 = filtered_df["2024 Total Sales"].sum()
+total_2025 = filtered_df["2025 Total Sales"].sum()
+diff_total = filtered_df["DIFFERENCE Total Sales"].sum()
+
+col1, col2, col3, col4 = st.columns(4)
+col1.metric("2023 Total Sales", f"{total_2023:,.2f}")
+col2.metric("2024 Total Sales", f"{total_2024:,.2f}")
+col3.metric("2025 Total Sales", f"{total_2025:,.2f}")
+col4.metric("Difference Total Sales", f"{diff_total:,.2f}")
 
 st.markdown("---")
 
-# --- Show Data Table (with Grand Total) ---
-st.subheader("Branch-wise Full Data")
-st.dataframe(filtered_df, height=600)
+# --- Horizontal Bar Charts ---
+st.subheader("Total Sales by Branch")
+
+fig = px.bar(
+    filtered_df,
+    x="2023 Total Sales",
+    y="Branch",
+    orientation='h',
+    text="2023 Total Sales",
+    labels={"2023 Total Sales": "2023 Total Sales"},
+    color="2023 Total Sales",
+    color_continuous_scale="Viridis"
+)
+fig.update_layout(height=600, yaxis={'categoryorder':'total ascending'})
+st.plotly_chart(fig, use_container_width=True)
+
+fig2 = px.bar(
+    filtered_df,
+    x="2024 Total Sales",
+    y="Branch",
+    orientation='h',
+    text="2024 Total Sales",
+    labels={"2024 Total Sales": "2024 Total Sales"},
+    color="2024 Total Sales",
+    color_continuous_scale="Blues"
+)
+fig2.update_layout(height=600, yaxis={'categoryorder':'total ascending'})
+st.plotly_chart(fig2, use_container_width=True)
+
+fig3 = px.bar(
+    filtered_df,
+    x="2025 Total Sales",
+    y="Branch",
+    orientation='h',
+    text="2025 Total Sales",
+    labels={"2025 Total Sales": "2025 Total Sales"},
+    color="2025 Total Sales",
+    color_continuous_scale="Greens"
+)
+fig3.update_layout(height=600, yaxis={'categoryorder':'total ascending'})
+st.plotly_chart(fig3, use_container_width=True)
+
+st.markdown("---")
+
+# --- Show Table ---
+st.subheader("Data Table")
+st.dataframe(filtered_df, height=500)
