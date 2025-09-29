@@ -7,7 +7,7 @@ st.set_page_config(page_title="Branch Yearly Sales Dashboard", layout="wide")
 st.title("📊 Branch Yearly Sales Dashboard (2023-2025)")
 
 # --- Load Data ---
-df = pd.read_excel("branch_full_data.xlsx")  # replace with your file
+df = pd.read_excel("Sales 2024 Vs 2025 (3).Xlsx")  # replace with your file
 
 # --- Sidebar Filters ---
 branches = df["Branch"].unique().tolist()
