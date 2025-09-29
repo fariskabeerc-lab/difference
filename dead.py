@@ -77,14 +77,13 @@ data = {
 
 df = pd.DataFrame(data)
 
-# --- Sidebar Branch Filter ---
-branches = ["All Branches"] + df["Branch"].tolist()[:-1]  # Exclude Grand Total
+# --- Sidebar Branch Filter (only individual branches) ---
+branches = df["Branch"].tolist()[:-1]  # Exclude Grand Total
 selected_branch = st.sidebar.selectbox("Select Branch", branches)
 
-if selected_branch != "All Branches":
-    filtered_df = df[df["Branch"] == selected_branch]
-else:
-    filtered_df = df[df["Branch"] != "Grand Total"]  # Exclude Grand Total from table display
+# Filter for the selected branch
+filtered_df = df[df["Branch"] == selected_branch]
+
 
 # --- Key Metrics ---
 st.subheader("📌 Key Metrics (Jan-Aug)")
